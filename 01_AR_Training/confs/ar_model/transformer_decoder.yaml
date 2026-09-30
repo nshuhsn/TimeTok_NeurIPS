@@ -1,0 +1,16 @@
+ar_model_name: transformer_decoder
+
+
+
+dim: 64
+depth: 2
+heads: 4
+dim_head: 32
+dropout: 0.1
+
+condition_on_class: True
+condition_on_dataset: True
+classifier_free_guidance_prob: 0.1
+
+generation:
+  inference_temperature: 1.0

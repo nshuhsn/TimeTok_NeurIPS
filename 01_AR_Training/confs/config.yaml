@@ -1,0 +1,22 @@
+defaults:
+  - data: token_data 
+  - task: ar_training
+  - logger: wandb
+  - trainer: base
+  - ar_model: transformer_decoder
+  - validation: teacher_forcing
+  - override hydra/job_logging: colorlog
+  - override hydra/hydra_logging: colorlog
+
+exp_num: 9999
+seed: 42
+gpu_id: 0
+benchmark: False
+deterministic: False
+generate_samples: True
+generate_mix_prompt_length: False
+
+save_output_path: ../03_Shared/AR_outputs/${data.data_name}/EXP${exp_num}
+hydra:
+  run:
+    dir: ${save_output_path}

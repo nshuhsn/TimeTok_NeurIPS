@@ -1,0 +1,289 @@
+{
+  "_target_": "TimeTok_wrapper.TimeTok",
+  "encoder": {
+    "_target_": "model.utils.wrappers.SequentialModuleDictWrapper",
+    "module_dict": {
+      "enc_channels_to_last": {
+        "_target_": "model.utils.dict_ops.PerSampleOp",
+        "read_key": "ts",
+        "write_key": "ts_blc",
+        "per_sample_op": {
+          "_target_": "model.utils.dict_ops_1d.channels_first_to_last_1d",
+          "_partial_": true
+        }
+      },
+      "enc_patch_emb": {
+        "_target_": "model.preprocessors.patching.PatchEmbedder",
+        "input_tensor_list_read_key": "ts_blc",
+        "patches_list_write_key": "enc_ts_patched",
+        "n_patches_write_key": "enc_n_patches",
+        "channels_in": 1,
+        "dim": 256,
+        "patch_sizes": [
+          3
+        ],
+        "flatten_patches": true
+      },
+      "enc_posemb_module": {
+        "_target_": "model.utils.posembs.PositionalEmbeddingAdder",
+        "read_key": "enc_ts_patched",
+        "write_key": "enc_ts_patched",
+        "dim": 256,
+        "max_sizes": [
+          1751
+        ],
+        "posemb_type": "learnable_sum",
+        "posemb_scaling": "absolute"
+      },
+      "enc_register_module": {
+        "_target_": "model.preprocessors.registers.Registers1D",
+        "input_tensor_list_read_key": "enc_ts_patched",
+        "register_sizes_read_write_key": "register_sizes",
+        "registers_write_key": "enc_registers",
+        "dim": 256,
+        "n_min": 128,
+        "n_max": 128,
+        "size_sampling_mode": "uniform",
+        "ordering_mode": "nested"
+      },
+      "enc_seq_packer": {
+        "_target_": "model.preprocessors.flex_seq_packing.BlockWiseSequencePacker",
+        "input_list_read_keys": [
+          "enc_ts_patched",
+          "enc_registers"
+        ],
+        "packed_seq_write_key": "enc_packed_seq",
+        "block_mask_write_key": "enc_block_mask",
+        "inner_packed_shapes_write_key": "enc_ps_inner",
+        "outer_packed_shapes_write_key": "enc_ps_outer",
+        "mask_mode": "causal_last",
+        "pad_to_multiple": 256
+      },
+      "enc_transformer": {
+        "_target_": "model.trunks.transformers.FlexTransformer",
+        "input_seq_read_key": "enc_packed_seq",
+        "output_seq_write_key": "enc_packed_seq",
+        "dim": 256,
+        "depth": 3,
+        "block_mask_read_key": "enc_block_mask",
+        "use_act_checkpoint": true
+      },
+      "enc_unpacker": {
+        "_target_": "model.postprocessors.seq_unpacking.SequenceUnpacker",
+        "packed_seq_read_key": "enc_packed_seq",
+        "inner_seq_write_keys": [
+          "enc_ts_patched",
+          "enc_registers"
+        ],
+        "inner_packed_shapes_read_key": "enc_ps_inner",
+        "outer_packed_shapes_read_key": "enc_ps_outer"
+      },
+      "enc_to_latents": {
+        "_target_": "model.postprocessors.heads.LinearHead",
+        "read_key": "enc_registers",
+        "write_key": "enc_registers",
+        "dim": 256,
+        "dim_out": 6,
+        "use_mup_readout": false,
+        "weight_init_style": "zero",
+        "dtype_override": null
+      }
+    }
+  },
+  "regularizer": {
+    "_target_": "regularizers.quantize_fsq.FSQ",
+    "latents_read_key": "enc_registers",
+    "quants_write_key": "enc_registers_quant",
+    "tokens_write_key": "tokens",
+    "levels": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "drop_quant_p": 0.0,
+    "packed_call": false
+  },
+  "pipeline": {
+    "_target_": "flow_matching.pipelines.MinRFPipeline",
+    "_partial_": true,
+    "target_sizes_read_key": null,
+    "latents_read_key": "enc_registers_quant",
+    "timesteps_read_key": "timesteps",
+    "noised_images_read_key": "ts_noised",
+    "reconst_write_key": "ts_reconst",
+    "out_channels": 1
+  },
+  "decoder": {
+    "_target_": "model.utils.wrappers.SequentialModuleDictWrapper",
+    "module_dict": {
+      "dec_from_latents": {
+        "_target_": "model.preprocessors.linear.LinearLayer",
+        "read_key": "enc_registers_quant",
+        "write_key": "dec_registers_proj",
+        "dim_in": 6,
+        "dim": 256
+      },
+      "dec_registers_posemb_module": {
+        "_target_": "model.utils.posembs.PositionalEmbeddingAdder",
+        "read_key": "dec_registers_proj",
+        "write_key": "dec_registers_proj",
+        "dim": 256,
+        "max_sizes": [
+          1751
+        ],
+        "posemb_type": "learnable_sum",
+        "posemb_scaling": "absolute"
+      },
+      "dec_nested_dropout": {
+        "_target_": "model.preprocessors.sg_token_dropout.MaskedNestedDropout",
+        "read_write_key": "dec_registers_proj",
+        "dim": 256,
+        "size_sampling_mode": "pow2"
+      },
+      "ts_smoother": {
+        "_target_": "model.preprocessors.smoothing.GaussianSmooth1D",
+        "read_key": "ts",
+        "write_key": "ts",
+        "Kmax": 128,
+        "eval_keep_k_read_key": "eval_keep_k",
+        "train_keep_k_read_key": "train_keep_k",
+        "kernel_mix": "gauss_only",
+        "gamma": 1.0
+      },
+      "flow_matching_noise_module": {
+        "_target_": "flow_matching.noise_modules.MinRFNoiseModule",
+        "clean_images_read_key": "ts",
+        "noised_images_write_key": "ts_noised",
+        "noise_write_key": "flow_noise",
+        "timesteps_write_key": "timesteps",
+        "sigmas_write_key": "sigmas",
+        "ln": false,
+        "stratisfied": false,
+        "mode_scale": 0.25
+      },
+      "dec_latent_dropout": {
+        "_target_": "model.preprocessors.nullcond.LearnedNullCond",
+        "read_write_key": "dec_registers_proj",
+        "dim": 256,
+        "dropout_prob": 0.0
+      },
+      "dec_noise_channels_to_last": {
+        "_target_": "model.utils.dict_ops.PerSampleOp",
+        "read_key": "ts_noised",
+        "write_key": "ts_noised_bhwc",
+        "per_sample_op": {
+          "_target_": "model.utils.dict_ops_1d.channels_first_to_last_1d",
+          "_partial_": true
+        }
+      },
+      "dec_noise_patch_emb": {
+        "_target_": "model.preprocessors.patching.PatchEmbedder",
+        "input_tensor_list_read_key": "ts_noised_bhwc",
+        "patches_list_write_key": "ts_noised_patched",
+        "n_patches_write_key": "dec_n_patches",
+        "channels_in": 1,
+        "dim": 256,
+        "patch_sizes": [
+          3
+        ],
+        "flatten_patches": true
+      },
+      "dec_patches_posemb_module": {
+        "_target_": "model.utils.posembs.PositionalEmbeddingAdder",
+        "read_key": "ts_noised_patched",
+        "write_key": "dec_patches",
+        "dim": 256,
+        "max_sizes": [
+          1751
+        ],
+        "posemb_type": "learnable_sum",
+        "posemb_scaling": "absolute"
+      },
+      "dec_seq_packer": {
+        "_target_": "model.preprocessors.flex_seq_packing.BlockWiseSequencePacker",
+        "input_list_read_keys": [
+          "dec_patches",
+          "dec_registers_proj"
+        ],
+        "packed_seq_write_key": "dec_packed_seq",
+        "block_mask_write_key": "dec_block_mask",
+        "inner_packed_shapes_write_key": "dec_ps_inner",
+        "outer_packed_shapes_write_key": "dec_ps_outer",
+        "emb_packing_fn_write_key": "emb_packing_fn",
+        "mask_mode": "full",
+        "pad_to_multiple": 256,
+        "per_subseq_embs": true
+      },
+      "dec_time_embedder": {
+        "_target_": "model.preprocessors.time_embedding.TimestepEmbedder",
+        "timesteps_read_key": "timesteps",
+        "time_embedding_write_key": "dec_temb",
+        "dim": 256,
+        "frequency_embedding_size": 256,
+        "max_timestep": 1000.0
+      },
+      "dec_tokenlevel_embedder": {
+        "_target_": "model.preprocessors.token_level_embedding.TokenLevelEmbedding",
+        "train_keep_k_read_key": "train_keep_k",
+        "eval_keep_k_read_key": "eval_keep_k",
+        "write_key": "dec_toklev_emb",
+        "num_levels": 8,
+        "dim": 256
+      },
+      "dec_cond_fuser": {
+        "_target_": "model.preprocessors.token_level_embedding.CondFuserConcatProj",
+        "time_read_key": "dec_temb",
+        "toklev_read_key": "dec_toklev_emb",
+        "write_key": "dec_temb_fused",
+        "dim": 256
+      },
+      "dec_transformer": {
+        "_target_": "model.trunks.transformers.FlexTransformer",
+        "input_seq_read_key": "dec_packed_seq",
+        "output_seq_write_key": "dec_packed_seq",
+        "dim": 256,
+        "depth": 3,
+        "block_mask_read_key": "dec_block_mask",
+        "adaLN_emb_read_key": "dec_temb_fused",
+        "adaLN_packing_fn_read_key": "emb_packing_fn",
+        "adaLN_expansion": 2,
+        "use_act_checkpoint": true
+      },
+      "dec_unpacker": {
+        "_target_": "model.postprocessors.seq_unpacking.SequenceUnpacker",
+        "packed_seq_read_key": "dec_packed_seq",
+        "inner_seq_write_keys": [
+          "dec_patches",
+          "dec_registers_proj"
+        ],
+        "inner_packed_shapes_read_key": "dec_ps_inner",
+        "outer_packed_shapes_read_key": "dec_ps_outer"
+      },
+      "dec_to_patches": {
+        "_target_": "model.postprocessors.heads.ToPatchesLinearHead",
+        "read_key": "dec_patches",
+        "write_key": "dec_patches",
+        "dim": 256,
+        "channels_out": 1,
+        "patch_sizes": [
+          3
+        ],
+        "use_mup_readout": false,
+        "weight_init_style": "zero",
+        "adaLN_emb_read_key": "dec_temb"
+      },
+      "dec_channels_to_first": {
+        "_target_": "model.utils.dict_ops.PerSampleOp",
+        "read_key": "dec_patches",
+        "write_key": "ts_reconst",
+        "per_sample_op": {
+          "_target_": "model.utils.dict_ops_1d.channels_last_to_first_1d",
+          "_partial_": true
+        }
+      }
+    }
+  }
+}

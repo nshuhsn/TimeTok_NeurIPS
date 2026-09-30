@@ -1,0 +1,4 @@
+validation_strategy: fix_prompt_length
+prompt_length: 32
+
+# prompt_length options: [1, 2, 4, 8, 16, 32, 64]

@@ -1,0 +1,12 @@
+abs_data_root: ../03_Shared/tokenized_sequences
+tokenizer_name: ECG5000_tokenizer
+data_name: ECG5000_pz3
+
+max_token_size: 4096
+total_vocab_size: 4098 # e.g. 4096 + 1. (BOS) 4096 + 2. (Mask)
+max_seq_len: 128 # excluding BOS. Only the fully generated sequence itself.
+max_class_num: 30 # We expect at most 30 classes. This is used for class embeddings.
+
+num_workers: 4
+bos_id: 4096
+mask_id: 4097

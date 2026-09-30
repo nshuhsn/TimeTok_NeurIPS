@@ -1,0 +1,7 @@
+task_name: ar_training
+task_type: classification
+
+
+fast_dev_run: False 
+limit_train_batches: 1.0
+limit_val_batches: 1.0

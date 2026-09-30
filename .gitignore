@@ -1,0 +1,125 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Model checkpoints and logs
+checkpoints/
+logs/
+wandb/
+runs/
+outputs/
+
+# Default: ignore all .pt, .pth, .ckpt files
+*.pt
+*.pth
+*.ckpt
+
+# BUT include tokenizer_weights directory
+!03_Shared/tokenizer_weights/
+!03_Shared/tokenizer_weights/**
+
+# Data: ignore everything under data/ first
+data/*
+
+# BUT include Python files in data/
+!data/*.py
+!data/**/*.py
+
+# BUT include only ECG5000
+!data/UCRConverted/
+data/UCRConverted/*
+!data/UCRConverted/ECG5000/
+!data/UCRConverted/ECG5000/**
+
+# Data directories (elsewhere)
+UCRConverted/
+Nasdaq/
+ETTh1/
+GC_TSG_dataset/
+GC_TSG_dataset_alt/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# 
+*.jsonl 
+*.log
+*.meta.json
+# Experiment outputs
+results/
+experiments/
+
+# Wandb
+01_AR_Training/wandb/
+03_Shared/AR_outputs/
+03_Shared/tokenized_sequences/
+nohup.out
