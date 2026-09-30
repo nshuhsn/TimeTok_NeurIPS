@@ -88,3 +88,20 @@ sh scripts/run_foundational_ECG5000.sh
 Running the above script will train the VAR model, and construct synthetic datasets for the target dataset (e.g., ECG5000).
 
 Outputs of AR Training (synthetic tokens, synthetic time series) are saved to: `03_Shared/AR_outputs/{dataset}_pz3/EXP{EXP_NUM}/`
+
+## Acknowledgement
+
+We thank the authors of [FlexTok: Resampling Images into 1D Token Sequences of Flexible Length](https://github.com/apple/ml-flextok) for providing an excellent codebase, which this work builds upon.
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@article{lee2026timetok,
+  title={TimeTok: Granularity-Controllable Time-Series Generation via Hierarchical Tokenization},
+  author={Lee, Seokhyun and Kim, Jaeho and Oh, Changjun and van der Schaar, Mihaela and Lee, Changhee},
+  journal={arXiv preprint arXiv:2605.01418},
+  year={2026}
+}
+```
